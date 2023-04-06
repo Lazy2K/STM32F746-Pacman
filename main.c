@@ -240,6 +240,38 @@ void movePlayer(DirectionType currentDirection, int* pos, int level[18][32]) {
 	}
 }
 
+void clearEmptyPaths(int level_matrix[18][32], int* playerGridPos) {
+	int y; // Y Grid coordinate
+	int x; // X Grid coordinate
+	int y_painter = 0; // Y Screen position used to draw
+	int x_painter = 0; // X Screen position used to draw
+	GLCD_SetForegroundColor(GLCD_COLOR_BLACK);
+	for(y=0; y<18; y++) { // Loop over each grid row
+		for(x=0; x<32; x++) { // Loop over each grid column
+			if(level_matrix[y][x] == 0) { // Check if we should draw a path at current grid position
+				if(y == playerGridPos[1] && x == playerGridPos[0]) {
+					// Do Nothing - bad coding but it didn't work with !=
+				} else if (y == playerGridPos[1] && x == playerGridPos[0]+1) {
+					// Do Nothing - bad coing again
+				} else if (y == playerGridPos[1]+1 && x == playerGridPos[0]) {
+					// Do Nothing
+				} else if (y == playerGridPos[1]+1 && x == playerGridPos[0]+1) {
+					// Do Nothing
+				} else {
+					Draw_Fill_Rect(x_painter, y_painter, 15, 15);
+				}
+			}
+			x_painter += 15; // Increment x painter position by block size (15px)
+		}
+		x_painter = 0; // Reset x painter position for start of new row
+		y_painter += 15; // Increment y painter position by block size (15px)
+	}
+}
+
+void setupPowerPellets(int p[18][32], int level[18][32]) {
+	
+}
+
 uint32_t ADC_VALUES[2];
 int main(void) {
 	
@@ -247,6 +279,9 @@ int main(void) {
 	int playerGridPos[2];
 	DirectionType currentDirection;
 	DirectionType requestedDirection;
+	
+	// Power pellets variables
+	int powerPellets[18][32];
 
 	// Setup board
 	setup();
@@ -262,6 +297,9 @@ int main(void) {
 	// Draw level walls once
 	GLCD_SetForegroundColor(GLCD_COLOR_BLUE);
 	Draw_Level_Matrix(*level_01_matrix);
+	
+	// Init power pellets
+	setupPowerPellets(powerPellets, level_01_matrix);
 
 	// Game Loop
 	while(1) {
@@ -269,19 +307,15 @@ int main(void) {
 		// GPIO input to request change in direction
 		if(ADC_VALUES[0] > 3000) {
 			requestedDirection = LEFT;
-			GLCD_DrawString(0,0, "LEFT");
 		}
 		if(ADC_VALUES[0] < 1000) {
 			requestedDirection = RIGHT;
-			GLCD_DrawString(0,0, "RIGHT");
 		}
 		if(ADC_VALUES[1] > 3000) {
 			requestedDirection = UP;
-			GLCD_DrawString(0,0, "UP");
 		}
 		if(ADC_VALUES[1] < 1000) {
 			requestedDirection = DOWN;
-			GLCD_DrawString(0,0, "DOWN");
 		}
 		
 		
@@ -298,6 +332,8 @@ int main(void) {
 		// Draw updated pacman location
 		DrawPlayer(playerGridPos);
 		
+		// Reset empty paths to black
+		clearEmptyPaths(level_01_matrix, playerGridPos);
 		
 		
 		//GLCD_ClearScreen();
