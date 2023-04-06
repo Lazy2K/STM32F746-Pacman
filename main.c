@@ -199,10 +199,35 @@ void DrawPlayer(int *playerGridPos) {
 	Draw_Fill_Rect(playerGridPos[0]*15, playerGridPos[1]*15,30,30);
 }
 
+// Change player direction if possible
+void handleRequestedDirection(DirectionType* currentDirection, DirectionType requestedDirection, int* pos, int level[18][32]) {
+	if(requestedDirection == LEFT) {
+		if(level[pos[1]][pos[0]-1] == 0 && level[pos[1]+1][pos[0]-1] == 0) {
+			*currentDirection = requestedDirection;
+		}
+	} else if(requestedDirection == RIGHT) {
+		if(level[pos[1]][pos[0]+1] == 0 && level[pos[1]+1][pos[0]+1] == 0) {
+			*currentDirection = requestedDirection;
+		}
+	} else if(requestedDirection == UP) {
+		if(level[pos[1]-1][pos[0]] == 0 && level[pos[1]-1][pos[0]+1] == 0) {
+			*currentDirection = requestedDirection;
+		}
+	} else if(requestedDirection == DOWN) {
+		if(level[pos[1]+1][pos[0]] == 0 && level[pos[1]+1][pos[0]+1] == 0) {
+			*currentDirection = requestedDirection;
+		}
+	}
+}
+
+void movePlayer(DirectionType currentDirection, int* pos, int level[18][32]) {
+	
+}
+
 uint32_t ADC_VALUES[2];
 int main(void) {
 	
-	// Player Variables
+	// Player variables
 	int playerGridPos[2];
 	DirectionType currentDirection;
 	DirectionType requestedDirection;
@@ -225,9 +250,7 @@ int main(void) {
 	// Game Loop
 	while(1) {
 		
-		
-		// Detect change in player input
-		// Change direction value
+		// GPIO input to request change in direction
 		if(ADC_VALUES[0] > 3000) {
 			requestedDirection = LEFT;
 		}
@@ -240,12 +263,12 @@ int main(void) {
 		if(ADC_VALUES[1] < 1000) {
 			requestedDirection = DOWN;
 		}
-		//handleRequestedDirection(&currentDirection, requestedDirection, playerGridPos);
 		
+		// Handle player movement
+		handleRequestedDirection(&currentDirection, requestedDirection, playerGridPos, level_01_matrix);
+		movePlayer(currentDirection, playerGridPos, level_01_matrix);
 		
-		// Draw Level Paths (Black won't apear to be flickering)
-		//GLCD_SetForegroundColor(GLCD_COLOR_BLACK);
-		//Draw_Level_Path(*level_01_matrix, playerGridPos);
+
 		
 		wait(100);
 		
