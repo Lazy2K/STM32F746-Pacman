@@ -206,7 +206,7 @@ void handleRequestedDirection(DirectionType* currentDirection, DirectionType req
 			*currentDirection = requestedDirection;
 		}
 	} else if(requestedDirection == RIGHT) {
-		if(level[pos[1]][pos[0]+1] == 0 && level[pos[1]+1][pos[0]+1] == 0) {
+		if(level[pos[1]][pos[0]+2] == 0 && level[pos[1]+1][pos[0]+2] == 0) {
 			*currentDirection = requestedDirection;
 		}
 	} else if(requestedDirection == UP) {
@@ -214,14 +214,30 @@ void handleRequestedDirection(DirectionType* currentDirection, DirectionType req
 			*currentDirection = requestedDirection;
 		}
 	} else if(requestedDirection == DOWN) {
-		if(level[pos[1]+1][pos[0]] == 0 && level[pos[1]+1][pos[0]+1] == 0) {
+		if(level[pos[1]+2][pos[0]] == 0 && level[pos[1]+2][pos[0]+1] == 0) {
 			*currentDirection = requestedDirection;
 		}
 	}
 }
 
 void movePlayer(DirectionType currentDirection, int* pos, int level[18][32]) {
-	
+	if(currentDirection == LEFT) {
+		if(level[pos[1]][pos[0]-1] == 0 && level[pos[1]+1][pos[0]-1] == 0) {
+			pos[0] -= 1;
+		}
+	} else if(currentDirection == RIGHT) {
+		if(level[pos[1]][pos[0]+2] == 0 && level[pos[1]+1][pos[0]+2] == 0) {
+			pos[0] += 1;
+		}
+	} else if(currentDirection == UP) {
+		if(level[pos[1]-1][pos[0]] == 0 && level[pos[1]-1][pos[0]+1] == 0) {
+			pos[1] -= 1;
+		}
+	} else if(currentDirection == DOWN) {
+		if(level[pos[1]+2][pos[0]] == 0 && level[pos[1]+2][pos[0]+1] == 0) {
+			pos[1] += 1;
+		}
+	}
 }
 
 uint32_t ADC_VALUES[2];
@@ -253,16 +269,21 @@ int main(void) {
 		// GPIO input to request change in direction
 		if(ADC_VALUES[0] > 3000) {
 			requestedDirection = LEFT;
+			GLCD_DrawString(0,0, "LEFT");
 		}
 		if(ADC_VALUES[0] < 1000) {
 			requestedDirection = RIGHT;
+			GLCD_DrawString(0,0, "RIGHT");
 		}
 		if(ADC_VALUES[1] > 3000) {
 			requestedDirection = UP;
+			GLCD_DrawString(0,0, "UP");
 		}
 		if(ADC_VALUES[1] < 1000) {
 			requestedDirection = DOWN;
+			GLCD_DrawString(0,0, "DOWN");
 		}
+		
 		
 		// Handle player movement
 		handleRequestedDirection(&currentDirection, requestedDirection, playerGridPos, level_01_matrix);
@@ -275,7 +296,7 @@ int main(void) {
 		// Move pacman in current direction
 		//MovePlayer(playerGridPos, level_01_matrix, currentDirection);
 		// Draw updated pacman location
-		//DrawPlayer(playerGridPos);
+		DrawPlayer(playerGridPos);
 		
 		
 		
