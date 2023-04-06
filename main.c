@@ -5,13 +5,12 @@
 #include "Board_GLCD.h"
 
 // Level Files
-#include "level_01.c" // int level_01_matrix[18][32]
+#include "level_01.h" // int level_01_matrix[18][32]
 
-
+// Definitions
 #define wait HAL_Delay
 extern GLCD_FONT GLCD_Font_6x8;
 extern GLCD_FONT GLCD_Font_16x24;
-
 typedef enum directions {UP, DOWN, LEFT, RIGHT} DirectionType;
 
 
@@ -57,7 +56,7 @@ void SystemClock_Config(void) {
 }
 
 
-// Init ADC configuration 
+// ADC configuration 
 ADC_HandleTypeDef hadc;
 static void MX_ADC_Init(void)
 {
@@ -90,8 +89,6 @@ static void MX_ADC_Init(void)
 	HAL_NVIC_SetPriority(ADC_IRQn,0,0);
 	HAL_NVIC_EnableIRQ(ADC_IRQn);
 	
-	
-	
 	// Configure ADC
 	hadc.Instance = ADC3;
 	hadc.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
@@ -107,14 +104,17 @@ static void MX_ADC_Init(void)
 	hadc.Init.DMAContinuousRequests = ENABLE;
 	hadc.Init.EOCSelection = DISABLE;
 	
+	// Init ADC
 	HAL_ADC_Init(&hadc);
 	
+	// Configure Channel Pin A0
 	adcChannel.Channel = ADC_CHANNEL_0;
 	adcChannel.Rank = 1;
 	adcChannel.SamplingTime = ADC_SAMPLETIME_480CYCLES;
 	adcChannel.Offset = 0;
 	HAL_ADC_ConfigChannel(&hadc, &adcChannel);
 	
+	// Configre Channel Pin A1
 	adcChannel.Channel = ADC_CHANNEL_8;
 	adcChannel.Rank = 2;
 	adcChannel.SamplingTime = ADC_SAMPLETIME_480CYCLES;
@@ -123,6 +123,7 @@ static void MX_ADC_Init(void)
 	
 }
 
+// DMA Configuration
 DMA_HandleTypeDef dmac;
 void CongigureDMA() {
 	
@@ -145,14 +146,28 @@ void CongigureDMA() {
 	dmac.Init.MemBurst = DMA_MBURST_SINGLE;
 	dmac.Init.PeriphBurst = DMA_PBURST_SINGLE;
 	
+	// Init DMA
 	HAL_DMA_Init(&dmac);
 	__HAL_LINKDMA(&hadc, DMA_Handle, dmac);
 	
+	// Set DMA Priority
 	HAL_NVIC_SetPriority(DMA2_Stream4_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(DMA2_Stream4_IRQn);
 	
 }
 
+void setup(void) {
+	HAL_Init(); // Initialize "Hardware Abstraction Layer"
+	SystemClock_Config(); //<- Defined in snipped.c from labs
+	GLCD_Initialize();
+	MX_ADC_Init();
+	GLCD_SetFont(&GLCD_Font_16x24);
+	GLCD_SetForegroundColor(GLCD_COLOR_BLUE);
+	GLCD_SetBackgroundColor(GLCD_COLOR_BLACK);
+	GLCD_ClearScreen();
+}
+
+// Draw rectangle and fill
 void Draw_Fill_Rect(int xPos, int yPos, int xWidth, int yWidth) {
 	int i;
 	for(i=0; i<xWidth; i++) {
@@ -160,8 +175,7 @@ void Draw_Fill_Rect(int xPos, int yPos, int xWidth, int yWidth) {
 	}
 }
 
-
-
+// Draw level from level matrix file
 void Draw_Level_Matrix(int* level_matrix) {
 	int y; // Y Grid coordinate
 	int x; // X Grid coordinate
@@ -179,19 +193,7 @@ void Draw_Level_Matrix(int* level_matrix) {
 	}
 }
 
-
-void setup(void) {
-	HAL_Init(); // Initialize "Hardware Abstraction Layer"
-	SystemClock_Config(); //<- Defined in snipped.c from labs
-	GLCD_Initialize();
-	MX_ADC_Init();
-	GLCD_SetFont(&GLCD_Font_16x24);
-	GLCD_SetForegroundColor(GLCD_COLOR_BLUE);
-	GLCD_SetBackgroundColor(GLCD_COLOR_BLACK);
-	GLCD_ClearScreen();
-}
-
-
+// Draw player as rectangle
 void DrawPlayer(int *playerGridPos) {
 	GLCD_SetForegroundColor(GLCD_COLOR_YELLOW);
 	Draw_Fill_Rect(playerGridPos[0]*15, playerGridPos[1]*15,30,30);
@@ -205,17 +207,19 @@ int main(void) {
 	DirectionType currentDirection;
 	DirectionType requestedDirection;
 
+	// Setup board
 	setup();
 	
 	// Player starting position
 	playerGridPos[0] = 1;
 	playerGridPos[1] = 1;	
+	
+	// Start DMA for direct pipe from ADC
 	CongigureDMA();
 	HAL_ADC_Start_DMA(&hadc, ADC_VALUES, 2);
 	
-	
+	// Draw level walls once
 	GLCD_SetForegroundColor(GLCD_COLOR_BLUE);
-	// Draw Level Walls Once
 	Draw_Level_Matrix(*level_01_matrix);
 
 	// Game Loop
@@ -236,23 +240,22 @@ int main(void) {
 		if(ADC_VALUES[1] < 1000) {
 			requestedDirection = DOWN;
 		}
-		handleRequestedDirection(&currentDirection, requestedDirection, playerGridPos);
+		//handleRequestedDirection(&currentDirection, requestedDirection, playerGridPos);
 		
 		
 		// Draw Level Paths (Black won't apear to be flickering)
-		GLCD_SetForegroundColor(GLCD_COLOR_BLACK);
-		Draw_Level_Path(*level_01_matrix, playerGridPos);
+		//GLCD_SetForegroundColor(GLCD_COLOR_BLACK);
+		//Draw_Level_Path(*level_01_matrix, playerGridPos);
 		
 		wait(100);
 		
 		// Move pacman in current direction
-		MovePlayer(playerGridPos, level_01_matrix, currentDirection);
+		//MovePlayer(playerGridPos, level_01_matrix, currentDirection);
 		// Draw updated pacman location
-		DrawPlayer(playerGridPos);
+		//DrawPlayer(playerGridPos);
 		
 		
 		
 		//GLCD_ClearScreen();
 	}
-	
 }
