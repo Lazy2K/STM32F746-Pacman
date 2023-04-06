@@ -266,11 +266,17 @@ void DrawPlayer(int *playerGridPos) {
 	Draw_Fill_Rect(playerGridPos[0]*15, playerGridPos[1]*15,30,30);
 }
 
+void handleRequestedDirection(DirectionType* currentDirection, DirectionType requestedDirection, int* playerGridPos){
+	
+}
+
 uint32_t ADC_VALUES[2];
 int main(void) {
-	// Gameplay Variables
+	
+	// Player Variables
 	int playerGridPos[2];
-	DirectionType direction;
+	DirectionType currentDirection;
+	DirectionType requestedDirection;
 
 	setup();
 	
@@ -292,17 +298,18 @@ int main(void) {
 		// Detect change in player input
 		// Change direction value
 		if(ADC_VALUES[0] > 3000) {
-			direction = LEFT;
+			requestedDirection = LEFT;
 		}
 		if(ADC_VALUES[0] < 1000) {
-			direction = RIGHT;
+			requestedDirection = RIGHT;
 		}
 		if(ADC_VALUES[1] > 3000) {
-			direction = UP;
+			requestedDirection = UP;
 		}
 		if(ADC_VALUES[1] < 1000) {
-			direction = DOWN;
+			requestedDirection = DOWN;
 		}
+		handleRequestedDirection(&currentDirection, requestedDirection, playerGridPos);
 		
 		
 		// Draw Level Paths (Black won't apear to be flickering)
@@ -312,7 +319,7 @@ int main(void) {
 		wait(100);
 		
 		// Move pacman in current direction
-		MovePlayer(playerGridPos, level_01_matrix, direction);
+		MovePlayer(playerGridPos, level_01_matrix, currentDirection);
 		// Draw updated pacman location
 		DrawPlayer(playerGridPos);
 		
