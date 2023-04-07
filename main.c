@@ -18,6 +18,8 @@ typedef enum directions {UP, DOWN, LEFT, RIGHT} DirectionType;
 
 typedef struct {
 	int gridPos[2];
+	DirectionType currentDirection;
+	DirectionType requestedDirection;
 } playerGameObject;
 
 typedef struct {
@@ -214,42 +216,42 @@ void DrawPlayer(int *playerGridPos) {
 }
 
 // Change player direction if possible
-void handleRequestedDirection(DirectionType* currentDirection, DirectionType requestedDirection, int* pos, int level[18][32]) {
-	if(requestedDirection == LEFT) {
-		if(level[pos[1]][pos[0]-1] == 0 && level[pos[1]+1][pos[0]-1] == 0) {
-			*currentDirection = requestedDirection;
+void handleRequestedDirection(playerGameObject* player, int level[18][32]) {
+	if(player->requestedDirection == LEFT) {
+		if(level[player->gridPos[1]][player->gridPos[0]-1] == 0 && level[player->gridPos[1]+1][player->gridPos[0]-1] == 0) {
+			player->currentDirection = player->requestedDirection;
 		}
-	} else if(requestedDirection == RIGHT) {
-		if(level[pos[1]][pos[0]+2] == 0 && level[pos[1]+1][pos[0]+2] == 0) {
-			*currentDirection = requestedDirection;
+	} else if(player->requestedDirection == RIGHT) {
+		if(level[player->gridPos[1]][player->gridPos[0]+2] == 0 && level[player->gridPos[1]+1][player->gridPos[0]+2] == 0) {
+			player->currentDirection = player->requestedDirection;
 		}
-	} else if(requestedDirection == UP) {
-		if(level[pos[1]-1][pos[0]] == 0 && level[pos[1]-1][pos[0]+1] == 0) {
-			*currentDirection = requestedDirection;
+	} else if(player->requestedDirection == UP) {
+		if(level[player->gridPos[1]-1][player->gridPos[0]] == 0 && level[player->gridPos[1]-1][player->gridPos[0]+1] == 0) {
+			player->currentDirection = player->requestedDirection;
 		}
-	} else if(requestedDirection == DOWN) {
-		if(level[pos[1]+2][pos[0]] == 0 && level[pos[1]+2][pos[0]+1] == 0) {
-			*currentDirection = requestedDirection;
+	} else if(player->requestedDirection == DOWN) {
+		if(level[player->gridPos[1]+2][player->gridPos[0]] == 0 && level[player->gridPos[1]+2][player->gridPos[0]+1] == 0) {
+			player->currentDirection = player->requestedDirection;
 		}
 	}
 }
 
-void movePlayer(DirectionType currentDirection, int* pos, int level[18][32]) {
-	if(currentDirection == LEFT) {
-		if(level[pos[1]][pos[0]-1] == 0 && level[pos[1]+1][pos[0]-1] == 0) {
-			pos[0] -= 1;
+void movePlayer(playerGameObject* player, int level[18][32]) {
+	if(player->currentDirection == LEFT) {
+		if(level[player->gridPos[1]][player->gridPos[0]-1] == 0 && level[player->gridPos[1]+1][player->gridPos[0]-1] == 0) {
+			player->gridPos[0] -= 1;
 		}
-	} else if(currentDirection == RIGHT) {
-		if(level[pos[1]][pos[0]+2] == 0 && level[pos[1]+1][pos[0]+2] == 0) {
-			pos[0] += 1;
+	} else if(player->currentDirection == RIGHT) {
+		if(level[player->gridPos[1]][player->gridPos[0]+2] == 0 && level[player->gridPos[1]+1][player->gridPos[0]+2] == 0) {
+			player->gridPos[0] += 1;
 		}
-	} else if(currentDirection == UP) {
-		if(level[pos[1]-1][pos[0]] == 0 && level[pos[1]-1][pos[0]+1] == 0) {
-			pos[1] -= 1;
+	} else if(player->currentDirection == UP) {
+		if(level[player->gridPos[1]-1][player->gridPos[0]] == 0 && level[player->gridPos[1]-1][player->gridPos[0]+1] == 0) {
+			player->gridPos[1] -= 1;
 		}
-	} else if(currentDirection == DOWN) {
-		if(level[pos[1]+2][pos[0]] == 0 && level[pos[1]+2][pos[0]+1] == 0) {
-			pos[1] += 1;
+	} else if(player->currentDirection == DOWN) {
+		if(level[player->gridPos[1]+2][player->gridPos[0]] == 0 && level[player->gridPos[1]+2][player->gridPos[0]+1] == 0) {
+			player->gridPos[1] += 1;
 		}
 	}
 }
@@ -286,15 +288,15 @@ void clearEmptyPaths(int level_matrix[18][32], mapObject powerPellets, int numAr
 }
 */
 
-void setupPowerPellets(int level[18][32], mapObject ***powerPellets) {
+void setupPowerPellets(int level[18][32], powerPellets* powerPellets) {
 	int i;
 	int j;
 	for(i=0; i<18; i++){
 		for(j=0; j<32; j++) {
 			if(level[i][j] == 0 && level[i+1][j] == 0 && level[i][j+1] == 0 && level[i+1][j+1] == 0) {
-				powerPellets[i][j] = 1;
+				powerPellets->powerPellets[i][j] = 1;
 			} else {
-				powerPellets[i][j] = 0;
+				powerPellets->powerPellets[i][j] = 0;
 			}
 		}
 	}
@@ -304,7 +306,7 @@ void setupPowerPellets(int level[18][32], mapObject ***powerPellets) {
 	}
 }
 
-void drawPowerPellets(mapObject powerPellets) {
+void drawPowerPellets(powerPellets* powerPellets) {
 	int y; // Y Grid coordinate
 	int x; // X Grid coordinate
 	int y_painter = 0; // Y Screen position used to draw
@@ -312,7 +314,7 @@ void drawPowerPellets(mapObject powerPellets) {
 	GLCD_SetForegroundColor(GLCD_COLOR_GREEN);
 	for(y=0; y<18; y++) { // Loop over each grid row
 		for(x=0; x<32; x++) {
-			if(powerPellets[y][x] == 1) {
+			if(powerPellets->powerPellets[y][x] == 1) {
 				Draw_Fill_Rect(x_painter + 12, y_painter + 12, 5,5);
 			}
 			x_painter += 15;
@@ -322,17 +324,17 @@ void drawPowerPellets(mapObject powerPellets) {
 	}
 }
 
-void updatePowerPellets(int pos[2], mapObject powerPellets) {
-	powerPellets[pos[1]][pos[0]] = 0;
+void updatePowerPellets(int pos[2], powerPellets* powerPellets) {
+	powerPellets->powerPellets[pos[1]][pos[0]] = 0;
 }
 
-bool gameWin(mapObject powerPellets) {
+bool gameWin(powerPellets* powerPellets) {
 	int i;
 	int j;
 	bool flag = true;
 	for(i=0; i<18; i++) {
 		for(j=0; j<32; j++) {
-			if(powerPellets[i][j] == 1) {
+			if(powerPellets->powerPellets[i][j] == 1) {
 				flag = false;
 			}
 		}
@@ -353,12 +355,10 @@ uint32_t ADC_VALUES[2];
 int main(void) {
 	
 	// Player variables
-	int playerGridPos[2];
-	DirectionType currentDirection;
-	DirectionType requestedDirection;
-	
+	playerGameObject player;
+
 	// Power pellets variables
-	mapObject powerPellets;
+	powerPellets powerPellets;
 	
 	// Enemy variabels
 	enemyGameObject enemy_01;
@@ -369,8 +369,8 @@ int main(void) {
 	setup();
 	
 	// Player starting position
-	playerGridPos[0] = 1;
-	playerGridPos[1] = 1;	
+	player.gridPos[0] = 1;
+	player.gridPos[1] = 1;
 	
 	// Enemy starting positions
 	enemy_01.gridPos[0] = 29;
@@ -395,22 +395,22 @@ int main(void) {
 		
 		// GPIO input to request change in direction
 		if(ADC_VALUES[0] > 3000) {
-			requestedDirection = LEFT;
+			player.requestedDirection = LEFT;
 		}
 		if(ADC_VALUES[0] < 1000) {
-			requestedDirection = RIGHT;
+			player.requestedDirection = RIGHT;
 		}
 		if(ADC_VALUES[1] > 3000) {
-			requestedDirection = UP;
+			player.requestedDirection = UP;
 		}
 		if(ADC_VALUES[1] < 1000) {
-			requestedDirection = DOWN;
+			player.requestedDirection = DOWN;
 		}
 		
 		
 		// Handle player movement
-		handleRequestedDirection(&currentDirection, requestedDirection, playerGridPos, level_01_matrix);
-		movePlayer(currentDirection, playerGridPos, level_01_matrix);
+		handleRequestedDirection(&player, level_01_matrix);
+		movePlayer(&player, level_01_matrix);
 		
 		
 		
