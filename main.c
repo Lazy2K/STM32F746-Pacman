@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 #include "stm32f7xx_hal.h"
 #include "GLCD_Config.h"
@@ -15,6 +16,9 @@ typedef enum directions {UP, DOWN, LEFT, RIGHT} DirectionType;
 
 // Power pellets variables
 int powerPellets[18][32];
+// Enemy AI variables
+int enemyMovementScore_01[18][32];
+int enemyMovementScore_02[18][32]; 
 
 // Bring the bellow code into an external file if you can?
 #ifdef __RTX
@@ -323,6 +327,15 @@ bool gameWin() {
 	return flag;
 }
 
+void DrawEnemys(int num, ...) {
+	int i;
+	va_list valist;
+	va_start(valist,num);
+	for(i=0; i<num; i++) {
+		DrawPlayer(va_arg(valist,int*));
+	}
+}
+
 uint32_t ADC_VALUES[2];
 int main(void) {
 	
@@ -331,14 +344,22 @@ int main(void) {
 	DirectionType currentDirection;
 	DirectionType requestedDirection;
 	
+	// Enemy variables
+	int enemyGridPos_01[2];
+	int enemyGridPos_02[2];
 	
-
 	// Setup board
 	setup();
 	
 	// Player starting position
 	playerGridPos[0] = 1;
 	playerGridPos[1] = 1;	
+	
+	// Enemy starting positions
+	enemyGridPos_01[0] = 29;
+	enemyGridPos_01[1] = 1;
+	enemyGridPos_02[0] = 29;
+	enemyGridPos_02[1] = 15;
 	
 	// Start DMA for direct pipe from ADC
 	CongigureDMA();
@@ -382,6 +403,7 @@ int main(void) {
 		//MovePlayer(playerGridPos, level_01_matrix, currentDirection);
 		// Draw updated pacman location
 		DrawPlayer(playerGridPos);
+		DrawEnemys(2, enemyGridPos_01, enemyGridPos_02);
 		
 		updatePowerPellets(playerGridPos);
 		
