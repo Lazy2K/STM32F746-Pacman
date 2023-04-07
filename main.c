@@ -27,9 +27,6 @@ typedef struct {
 	int moveScore[18][32];
 } enemyGameObject;
 
-typedef struct {
-	int powerPellets[18][32];
-} powerPellets;
 
 // Bring the bellow code into an external file if you can?
 #ifdef __RTX
@@ -210,9 +207,9 @@ void Draw_Level_Matrix(int* level_matrix) {
 }
 
 // Draw player as rectangle
-void DrawPlayer(int *playerGridPos) {
+void DrawPlayer(playerGameObject* player) {
 	GLCD_SetForegroundColor(GLCD_COLOR_YELLOW);
-	Draw_Fill_Rect(playerGridPos[0]*15, playerGridPos[1]*15,30,30);
+	Draw_Fill_Rect(player->gridPos[0]*15, player->gridPos[1]*15,30,30);
 }
 
 // Change player direction if possible
@@ -288,25 +285,25 @@ void clearEmptyPaths(int level_matrix[18][32], mapObject powerPellets, int numAr
 }
 */
 
-void setupPowerPellets(int level[18][32], powerPellets* powerPellets) {
+void setupPowerPellets(int level[18][32], int power[18][32]) {
 	int i;
 	int j;
 	for(i=0; i<18; i++){
 		for(j=0; j<32; j++) {
 			if(level[i][j] == 0 && level[i+1][j] == 0 && level[i][j+1] == 0 && level[i+1][j+1] == 0) {
-				powerPellets->powerPellets[i][j] = 1;
+				power[i][j] = 1;
 			} else {
-				powerPellets->powerPellets[i][j] = 0;
+				power[i][j] = 0;
 			}
 		}
 	}
 	// Clear Bottom row of pellets (because on some levels there is no bottom wall 
 	for(i=0; i<32; i++) {
-		powerPellets[17][i] = 0;
+		power[17][i] = 0;
 	}
 }
 
-void drawPowerPellets(powerPellets* powerPellets) {
+void drawPowerPellets(int power[18][32]) {
 	int y; // Y Grid coordinate
 	int x; // X Grid coordinate
 	int y_painter = 0; // Y Screen position used to draw
@@ -314,7 +311,7 @@ void drawPowerPellets(powerPellets* powerPellets) {
 	GLCD_SetForegroundColor(GLCD_COLOR_GREEN);
 	for(y=0; y<18; y++) { // Loop over each grid row
 		for(x=0; x<32; x++) {
-			if(powerPellets->powerPellets[y][x] == 1) {
+			if(power[y][x] == 1) {
 				Draw_Fill_Rect(x_painter + 12, y_painter + 12, 5,5);
 			}
 			x_painter += 15;
@@ -324,11 +321,12 @@ void drawPowerPellets(powerPellets* powerPellets) {
 	}
 }
 
-void updatePowerPellets(int pos[2], powerPellets* powerPellets) {
-	powerPellets->powerPellets[pos[1]][pos[0]] = 0;
+void updatePowerPellets(playerGameObject* player, int power[18][32]) {
+	power[player->gridPos[1]][player->gridPos[0]] = 0;
 }
 
-bool gameWin(powerPellets* powerPellets) {
+/*
+bool gameWin(powerPelletsObject* powerPellets) {
 	int i;
 	int j;
 	bool flag = true;
@@ -341,7 +339,9 @@ bool gameWin(powerPellets* powerPellets) {
 	}
 	return flag;
 }
+*/
 
+/*
 void DrawEnemys(int num, ...) {
 	int i;
 	va_list valist;
@@ -350,20 +350,19 @@ void DrawEnemys(int num, ...) {
 		DrawPlayer(va_arg(valist,int*));
 	}
 }
+*/
 
 uint32_t ADC_VALUES[2];
+int powerPellets[18][32];
 int main(void) {
 	
 	// Player variables
 	playerGameObject player;
 
-	// Power pellets variables
-	powerPellets powerPellets;
-	
 	// Enemy variabels
-	enemyGameObject enemy_01;
-	enemyGameObject enemy_02;
-	enemyGameObject enemy_03;
+	//enemyGameObject enemy_01;
+	//enemyGameObject enemy_02;
+	//enemyGameObject enemy_03;
 	
 	// Setup board
 	setup();
@@ -373,8 +372,8 @@ int main(void) {
 	player.gridPos[1] = 1;
 	
 	// Enemy starting positions
-	enemy_01.gridPos[0] = 29;
-	enemy_01.gridPos[1] = 1;
+	//enemy_01.gridPos[0] = 29;
+	//enemy_01.gridPos[1] = 1;
 	
 	// Start DMA for direct pipe from ADC
 	CongigureDMA();
@@ -387,7 +386,7 @@ int main(void) {
 	Draw_Level_Matrix(*level_01_matrix);
 	
 	// Init power pellets
-	setupPowerPellets(level_01_matrix, &powerPellets);
+	setupPowerPellets(level_01_matrix, powerPellets);
 	drawPowerPellets(powerPellets);
 
 	// Game Loop
@@ -419,17 +418,19 @@ int main(void) {
 		// Move pacman in current direction
 		//MovePlayer(playerGridPos, level_01_matrix, currentDirection);
 		// Draw updated pacman location
-		DrawPlayer(playerGridPos);
-		DrawEnemys(2, enemyGridPos_01, enemyGridPos_02);
+		DrawPlayer(&player);
+
 		
-		updatePowerPellets(playerGridPos, powerPellets);
+		updatePowerPellets(&player, powerPellets);
 		
 		// Reset empty paths to black
 		//clearEmptyPaths(level_01_matrix, powerPellets, 4, playerGridPos, enemyGridPos_01, enemyGridPos_02, enemyGridPos_03);
 		
-		if(gameWin(powerPellets)) {
+		/*/
+		if(gameWin(&powerPellets)) {
 			GLCD_DrawString(0,0, "YOU WIN!");
 		}
+		*/
 		//GLCD_ClearScreen();
 	}
 }
