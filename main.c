@@ -13,12 +13,8 @@
 extern GLCD_FONT GLCD_Font_6x8;
 extern GLCD_FONT GLCD_Font_16x24;
 typedef enum directions {UP, DOWN, LEFT, RIGHT} DirectionType;
-
-// Power pellets variables
-int powerPellets[18][32];
-// Enemy AI variables
-int enemyMovementScore_01[18][32];
-int enemyMovementScore_02[18][32]; 
+typedef int mapObject[18][32];
+typedef int gridObject[2];
 
 // Bring the bellow code into an external file if you can?
 #ifdef __RTX
@@ -262,6 +258,8 @@ void clearEmptyPaths(int level_matrix[18][32], int* playerGridPos) {
 					// Do Nothing
 				} else if (y == playerGridPos[1]+1 && x == playerGridPos[0]+1) {
 					// Do Nothing
+				} else if(powerPellets[y][x]==1) {
+					//
 				} else {
 					Draw_Fill_Rect(x_painter, y_painter, 15, 15);
 				}
@@ -344,9 +342,16 @@ int main(void) {
 	DirectionType currentDirection;
 	DirectionType requestedDirection;
 	
-	// Enemy variables
-	int enemyGridPos_01[2];
-	int enemyGridPos_02[2];
+	// Power pellets variables
+	mapObject powerPellets;
+	
+	// Enemy variabels
+	mapObject enemyMoveScore_01;
+	mapObject enemyMoveScore_02;
+	mapObject enemyMoveScore_03;
+	gridObject enemyGridPos_01;
+	gridObject enemyGridPos_02;
+	gridObject enemyGridPos_03;
 	
 	// Setup board
 	setup();
@@ -371,6 +376,8 @@ int main(void) {
 	
 	// Init power pellets
 	setupPowerPellets(level_01_matrix);
+	
+	drawPowerPellets();
 
 	// Game Loop
 	while(1) {
@@ -394,8 +401,7 @@ int main(void) {
 		handleRequestedDirection(&currentDirection, requestedDirection, playerGridPos, level_01_matrix);
 		movePlayer(currentDirection, playerGridPos, level_01_matrix);
 		
-		drawPowerPellets();
-
+		
 		
 		wait(100);
 		
