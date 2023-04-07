@@ -8,10 +8,12 @@
 // Level Files
 #include "level_01.h" // int level_01_matrix[18][32]
 
-// Definitions
+// Hardware definitions
 #define wait HAL_Delay
 extern GLCD_FONT GLCD_Font_6x8;
 extern GLCD_FONT GLCD_Font_16x24;
+
+// Game definitions
 typedef enum directions {UP, DOWN, LEFT, RIGHT} DirectionType;
 typedef int mapObject[18][32];
 typedef int gridObject[2];
