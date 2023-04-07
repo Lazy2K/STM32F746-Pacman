@@ -309,6 +309,20 @@ void updatePowerPellets(int pos[2]) {
 	powerPellets[pos[1]][pos[0]] = 0;
 }
 
+bool gameWin() {
+	int i;
+	int j;
+	bool flag = true;
+	for(i=0; i<18; i++) {
+		for(j=0; j<32; j++) {
+			if(powerPellets[i][j] == 1) {
+				flag = false;
+			}
+		}
+	}
+	return flag;
+}
+
 uint32_t ADC_VALUES[2];
 int main(void) {
 	
@@ -374,7 +388,9 @@ int main(void) {
 		// Reset empty paths to black
 		clearEmptyPaths(level_01_matrix, playerGridPos);
 		
-		
+		if(gameWin()) {
+			GLCD_DrawString(0,0, "YOU WIN!");
+		}
 		//GLCD_ClearScreen();
 	}
 }
