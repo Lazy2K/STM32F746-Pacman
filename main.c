@@ -15,8 +15,19 @@ extern GLCD_FONT GLCD_Font_16x24;
 
 // Game definitions
 typedef enum directions {UP, DOWN, LEFT, RIGHT} DirectionType;
-typedef int mapObject[18][32];
-typedef int gridObject[2];
+
+typedef struct {
+	int gridPos[2];
+} playerGameObject;
+
+typedef struct {
+	int gridPos[2];
+	int moveScore[18][32];
+} enemyGameObject;
+
+typedef struct {
+	int powerPellets[18][32];
+} powerPellets;
 
 // Bring the bellow code into an external file if you can?
 #ifdef __RTX
@@ -243,7 +254,8 @@ void movePlayer(DirectionType currentDirection, int* pos, int level[18][32]) {
 	}
 }
 
-void clearEmptyPaths(int level_matrix[18][32], int* playerGridPos) {
+/*
+void clearEmptyPaths(int level_matrix[18][32], mapObject powerPellets, int numArgs, ...) {
 	int y; // Y Grid coordinate
 	int x; // X Grid coordinate
 	int y_painter = 0; // Y Screen position used to draw
@@ -272,8 +284,9 @@ void clearEmptyPaths(int level_matrix[18][32], int* playerGridPos) {
 		y_painter += 15; // Increment y painter position by block size (15px)
 	}
 }
+*/
 
-void setupPowerPellets(int level[18][32]) {
+void setupPowerPellets(int level[18][32], mapObject ***powerPellets) {
 	int i;
 	int j;
 	for(i=0; i<18; i++){
@@ -291,7 +304,7 @@ void setupPowerPellets(int level[18][32]) {
 	}
 }
 
-void drawPowerPellets(void) {
+void drawPowerPellets(mapObject powerPellets) {
 	int y; // Y Grid coordinate
 	int x; // X Grid coordinate
 	int y_painter = 0; // Y Screen position used to draw
@@ -309,11 +322,11 @@ void drawPowerPellets(void) {
 	}
 }
 
-void updatePowerPellets(int pos[2]) {
+void updatePowerPellets(int pos[2], mapObject powerPellets) {
 	powerPellets[pos[1]][pos[0]] = 0;
 }
 
-bool gameWin() {
+bool gameWin(mapObject powerPellets) {
 	int i;
 	int j;
 	bool flag = true;
@@ -348,12 +361,9 @@ int main(void) {
 	mapObject powerPellets;
 	
 	// Enemy variabels
-	mapObject enemyMoveScore_01;
-	mapObject enemyMoveScore_02;
-	mapObject enemyMoveScore_03;
-	gridObject enemyGridPos_01;
-	gridObject enemyGridPos_02;
-	gridObject enemyGridPos_03;
+	enemyGameObject enemy_01;
+	enemyGameObject enemy_02;
+	enemyGameObject enemy_03;
 	
 	// Setup board
 	setup();
@@ -363,23 +373,22 @@ int main(void) {
 	playerGridPos[1] = 1;	
 	
 	// Enemy starting positions
-	enemyGridPos_01[0] = 29;
-	enemyGridPos_01[1] = 1;
-	enemyGridPos_02[0] = 29;
-	enemyGridPos_02[1] = 15;
+	enemy_01.gridPos[0] = 29;
+	enemy_01.gridPos[1] = 1;
 	
 	// Start DMA for direct pipe from ADC
 	CongigureDMA();
 	HAL_ADC_Start_DMA(&hadc, ADC_VALUES, 2);
+	
+	
 	
 	// Draw level walls once
 	GLCD_SetForegroundColor(GLCD_COLOR_BLUE);
 	Draw_Level_Matrix(*level_01_matrix);
 	
 	// Init power pellets
-	setupPowerPellets(level_01_matrix);
-	
-	drawPowerPellets();
+	setupPowerPellets(level_01_matrix, &powerPellets);
+	drawPowerPellets(powerPellets);
 
 	// Game Loop
 	while(1) {
@@ -413,12 +422,12 @@ int main(void) {
 		DrawPlayer(playerGridPos);
 		DrawEnemys(2, enemyGridPos_01, enemyGridPos_02);
 		
-		updatePowerPellets(playerGridPos);
+		updatePowerPellets(playerGridPos, powerPellets);
 		
 		// Reset empty paths to black
-		clearEmptyPaths(level_01_matrix, playerGridPos);
+		//clearEmptyPaths(level_01_matrix, powerPellets, 4, playerGridPos, enemyGridPos_01, enemyGridPos_02, enemyGridPos_03);
 		
-		if(gameWin()) {
+		if(gameWin(powerPellets)) {
 			GLCD_DrawString(0,0, "YOU WIN!");
 		}
 		//GLCD_ClearScreen();
