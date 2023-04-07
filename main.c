@@ -253,8 +253,11 @@ void movePlayer(playerGameObject* player, int level[18][32]) {
 	}
 }
 
-/*
-void clearEmptyPaths(int level_matrix[18][32], mapObject powerPellets, int numArgs, ...) {
+
+void clearEmptyPaths(int level_matrix[18][32], int power[18][32], int numArgs, ...) {
+	va_list valist;
+	va_start(valist,numArgs);
+	
 	int y; // Y Grid coordinate
 	int x; // X Grid coordinate
 	int y_painter = 0; // Y Screen position used to draw
@@ -263,19 +266,7 @@ void clearEmptyPaths(int level_matrix[18][32], mapObject powerPellets, int numAr
 	for(y=0; y<18; y++) { // Loop over each grid row
 		for(x=0; x<32; x++) { // Loop over each grid column
 			if(level_matrix[y][x] == 0) { // Check if we should draw a path at current grid position
-				if(y == playerGridPos[1] && x == playerGridPos[0]) {
-					// Do Nothing - bad coding but it didn't work with !=
-				} else if (y == playerGridPos[1] && x == playerGridPos[0]+1) {
-					// Do Nothing - bad coing again
-				} else if (y == playerGridPos[1]+1 && x == playerGridPos[0]) {
-					// Do Nothing
-				} else if (y == playerGridPos[1]+1 && x == playerGridPos[0]+1) {
-					// Do Nothing
-				} else if(powerPellets[y][x]==1) {
-					//
-				} else {
-					Draw_Fill_Rect(x_painter, y_painter, 15, 15);
-				}
+				// Check for player, enemies(loop), pellets
 			}
 			x_painter += 15; // Increment x painter position by block size (15px)
 		}
@@ -283,7 +274,7 @@ void clearEmptyPaths(int level_matrix[18][32], mapObject powerPellets, int numAr
 		y_painter += 15; // Increment y painter position by block size (15px)
 	}
 }
-*/
+
 
 void setupPowerPellets(int level[18][32], int power[18][32]) {
 	int i;
@@ -360,9 +351,9 @@ int main(void) {
 	playerGameObject player;
 
 	// Enemy variabels
-	//enemyGameObject enemy_01;
-	//enemyGameObject enemy_02;
-	//enemyGameObject enemy_03;
+	enemyGameObject enemy_01;
+	enemyGameObject enemy_02;
+	enemyGameObject enemy_03;
 	
 	// Setup board
 	setup();
@@ -424,7 +415,7 @@ int main(void) {
 		updatePowerPellets(&player, powerPellets);
 		
 		// Reset empty paths to black
-		//clearEmptyPaths(level_01_matrix, powerPellets, 4, playerGridPos, enemyGridPos_01, enemyGridPos_02, enemyGridPos_03);
+		clearEmptyPaths(level_01_matrix, powerPellets, 4, player, enemy_01, enemy_02, enemy_02);
 		
 		/*/
 		if(gameWin(&powerPellets)) {
