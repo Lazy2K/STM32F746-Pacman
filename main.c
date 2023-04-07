@@ -13,7 +13,8 @@ extern GLCD_FONT GLCD_Font_6x8;
 extern GLCD_FONT GLCD_Font_16x24;
 typedef enum directions {UP, DOWN, LEFT, RIGHT} DirectionType;
 
-
+// Power pellets variables
+int powerPellets[18][32];
 
 // Bring the bellow code into an external file if you can?
 #ifdef __RTX
@@ -268,8 +269,44 @@ void clearEmptyPaths(int level_matrix[18][32], int* playerGridPos) {
 	}
 }
 
-void setupPowerPellets(int p[18][32], int level[18][32]) {
-	
+void setupPowerPellets(int level[18][32]) {
+	int i;
+	int j;
+	for(i=0; i<18; i++){
+		for(j=0; j<32; j++) {
+			if(level[i][j] == 0 && level[i+1][j] == 0 && level[i][j+1] == 0 && level[i+1][j+1] == 0) {
+				powerPellets[i][j] = 1;
+			} else {
+				powerPellets[i][j] = 0;
+			}
+		}
+	}
+	// Clear Bottom row of pellets (because on some levels there is no bottom wall 
+	for(i=0; i<32; i++) {
+		powerPellets[17][i] = 0;
+	}
+}
+
+void drawPowerPellets(void) {
+	int y; // Y Grid coordinate
+	int x; // X Grid coordinate
+	int y_painter = 0; // Y Screen position used to draw
+	int x_painter = 0; // X Screen position used to draw
+	GLCD_SetForegroundColor(GLCD_COLOR_GREEN);
+	for(y=0; y<18; y++) { // Loop over each grid row
+		for(x=0; x<32; x++) {
+			if(powerPellets[y][x] == 1) {
+				Draw_Fill_Rect(x_painter + 12, y_painter + 12, 5,5);
+			}
+			x_painter += 15;
+		}
+		x_painter = 0;
+		y_painter += 15;
+	}
+}
+
+void updatePowerPellets(int pos[2]) {
+	powerPellets[pos[1]][pos[0]] = 0;
 }
 
 uint32_t ADC_VALUES[2];
@@ -280,8 +317,7 @@ int main(void) {
 	DirectionType currentDirection;
 	DirectionType requestedDirection;
 	
-	// Power pellets variables
-	int powerPellets[18][32];
+	
 
 	// Setup board
 	setup();
@@ -299,7 +335,7 @@ int main(void) {
 	Draw_Level_Matrix(*level_01_matrix);
 	
 	// Init power pellets
-	setupPowerPellets(powerPellets, level_01_matrix);
+	setupPowerPellets(level_01_matrix);
 
 	// Game Loop
 	while(1) {
@@ -323,6 +359,7 @@ int main(void) {
 		handleRequestedDirection(&currentDirection, requestedDirection, playerGridPos, level_01_matrix);
 		movePlayer(currentDirection, playerGridPos, level_01_matrix);
 		
+		drawPowerPellets();
 
 		
 		wait(100);
@@ -331,6 +368,8 @@ int main(void) {
 		//MovePlayer(playerGridPos, level_01_matrix, currentDirection);
 		// Draw updated pacman location
 		DrawPlayer(playerGridPos);
+		
+		updatePowerPellets(playerGridPos);
 		
 		// Reset empty paths to black
 		clearEmptyPaths(level_01_matrix, playerGridPos);
