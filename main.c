@@ -267,6 +267,7 @@ void clearEmptyPaths(int level_matrix[18][32], int power[18][32], int numArgs, .
 		for(x=0; x<32; x++) { // Loop over each grid column
 			if(level_matrix[y][x] == 0) { // Check if we should draw a path at current grid position
 				// Check for player, enemies(loop), pellets
+				
 			}
 			x_painter += 15; // Increment x painter position by block size (15px)
 		}
