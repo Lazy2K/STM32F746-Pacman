@@ -208,7 +208,6 @@ void Draw_Level_Matrix(int* level_matrix) {
 
 // Draw player as rectangle
 void DrawPlayer(playerGameObject* player) {
-	GLCD_SetForegroundColor(GLCD_COLOR_YELLOW);
 	Draw_Fill_Rect(player->gridPos[0]*15, player->gridPos[1]*15,30,30);
 }
 
@@ -254,20 +253,24 @@ void movePlayer(playerGameObject* player, int level[18][32]) {
 }
 
 
-void clearEmptyPaths(int level_matrix[18][32], int power[18][32], int numArgs, ...) {
-	va_list valist;
-	va_start(valist,numArgs);
-	
+void clearEmptyPaths(int level_matrix[18][32], int power[18][32], playerGameObject* player, playerGameObject* enemy1) {
 	int y; // Y Grid coordinate
 	int x; // X Grid coordinate
 	int y_painter = 0; // Y Screen position used to draw
 	int x_painter = 0; // X Screen position used to draw
+
+	
 	GLCD_SetForegroundColor(GLCD_COLOR_BLACK);
 	for(y=0; y<18; y++) { // Loop over each grid row
 		for(x=0; x<32; x++) { // Loop over each grid column
-			if(level_matrix[y][x] == 0) { // Check if we should draw a path at current grid position
-				// Check for player, enemies(loop), pellets
-				
+			if(level_matrix[y][x] == 0) {
+				if(x==player->gridPos[0] && y==player->gridPos[1]) {
+					// Don't Draw
+				} else if(x==enemy1->gridPos[0] && y==enemy1->gridPos[1]) {
+					// Don't Draw
+				} else {
+					Draw_Fill_Rect(x_painter, y_painter, 15,15);
+				}
 			}
 			x_painter += 15; // Increment x painter position by block size (15px)
 		}
@@ -344,6 +347,11 @@ void DrawEnemys(int num, ...) {
 }
 */
 
+void DrawEnemys(playerGameObject* enemy1) {
+	GLCD_SetForegroundColor(GLCD_COLOR_RED);
+	DrawPlayer(enemy1);
+}
+
 uint32_t ADC_VALUES[2];
 int powerPellets[18][32];
 int main(void) {
@@ -352,9 +360,8 @@ int main(void) {
 	playerGameObject player;
 
 	// Enemy variabels
-	enemyGameObject enemy_01;
-	enemyGameObject enemy_02;
-	enemyGameObject enemy_03;
+	playerGameObject enemy01;
+
 	
 	// Setup board
 	setup();
@@ -362,10 +369,11 @@ int main(void) {
 	// Player starting position
 	player.gridPos[0] = 1;
 	player.gridPos[1] = 1;
+	enemy01.gridPos[0] = 1;
+	enemy01.gridPos[1] = 5;
+
 	
-	// Enemy starting positions
-	//enemy_01.gridPos[0] = 29;
-	//enemy_01.gridPos[1] = 1;
+	
 	
 	// Start DMA for direct pipe from ADC
 	CongigureDMA();
@@ -410,13 +418,15 @@ int main(void) {
 		// Move pacman in current direction
 		//MovePlayer(playerGridPos, level_01_matrix, currentDirection);
 		// Draw updated pacman location
+		GLCD_SetForegroundColor(GLCD_COLOR_YELLOW);
 		DrawPlayer(&player);
+		DrawEnemys(&enemy01);
 
 		
 		updatePowerPellets(&player, powerPellets);
 		
 		// Reset empty paths to black
-		clearEmptyPaths(level_01_matrix, powerPellets, 4, player, enemy_01, enemy_02, enemy_02);
+		clearEmptyPaths(level_01_matrix, powerPellets, &player, &enemy01);
 		
 		/*/
 		if(gameWin(&powerPellets)) {
