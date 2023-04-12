@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <math.h>
 #include "stm32f7xx_hal.h"
 #include "GLCD_Config.h"
 #include "Board_GLCD.h"
@@ -14,13 +15,17 @@ extern GLCD_FONT GLCD_Font_6x8;
 extern GLCD_FONT GLCD_Font_16x24;
 
 // Game definitions
+#define PI 3.141592654
 typedef enum directions {UP, DOWN, LEFT, RIGHT} DirectionType;
 typedef enum gameStates {PLAY, WIN, LOSE, RESTART} GameStateType;
+
+typedef int moveScore[18];
 
 typedef struct {
 	int gridPos[2];
 	DirectionType currentDirection;
 	DirectionType requestedDirection;
+	moveScore moveScore;
 } playerGameObject;
 
 typedef struct {
@@ -372,6 +377,19 @@ void DrawEnemys(playerGameObject* enemy1) {
 	DrawPlayer(enemy1);
 }
 
+void figureEnemyDirection(playerGameObject* enemy, playerGameObject* player) {
+	int m;
+	double angle;
+	// Gradient
+	m = (player->gridPos[1]-enemy->gridPos[1])/(player->gridPos[0]-enemy->gridPos[0]);
+	angle = atan(m);
+	angle = (angle *180) / PI;
+	
+	if(angle > 90 && angle < 180) {
+		enemy->requestedDirection = UP;
+	}
+}
+
 uint32_t ADC_VALUES[2];
 int powerPellets[18][32];
 int main(void) {
@@ -392,8 +410,10 @@ int main(void) {
 	player.gridPos[1] = 1;
 	enemy01.gridPos[0] = 1;
 	enemy01.gridPos[1] = 6;
-
 	
+
+	// Just testing
+	enemy01.requestedDirection = RIGHT;
 	
 	
 	// Start DMA for direct pipe from ADC
@@ -429,12 +449,16 @@ int main(void) {
 				player.requestedDirection = DOWN;
 			}
 			
+			// Figure out what direction the enemy's must go
+			figureEnemyDirection(&enemy01, &player);
 			
 			// Handle player movement
 			handleRequestedDirection(&player, level_01_matrix);
 			movePlayer(&player, level_01_matrix);
 			
 			
+			handleRequestedDirection(&enemy01, level_01_matrix);
+			movePlayer(&enemy01, level_01_matrix);
 			
 			wait(100);
 			
