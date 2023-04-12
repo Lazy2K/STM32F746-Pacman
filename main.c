@@ -15,6 +15,7 @@ extern GLCD_FONT GLCD_Font_16x24;
 
 // Game definitions
 typedef enum directions {UP, DOWN, LEFT, RIGHT} DirectionType;
+typedef enum gameStates {PLAY, WIN, LOSE, RESTART} GameStateType;
 
 typedef struct {
 	int gridPos[2];
@@ -264,9 +265,9 @@ void clearEmptyPaths(int level_matrix[18][32], int power[18][32], playerGameObje
 	for(y=0; y<18; y++) { // Loop over each grid row
 		for(x=0; x<32; x++) { // Loop over each grid column
 			if(level_matrix[y][x] == 0) {
-				if(x==player->gridPos[0] && y==player->gridPos[1]) {
+				if(x==player->gridPos[0] && y==player->gridPos[1] || x==player->gridPos[0]+1 && y==player->gridPos[1] || x==player->gridPos[0] && y==player->gridPos[1]+1 || x==player->gridPos[0]+1 && y==player->gridPos[1]+1) {
 					// Don't Draw
-				} else if(x==enemy1->gridPos[0] && y==enemy1->gridPos[1]) {
+				} else if(x==enemy1->gridPos[0] && y==enemy1->gridPos[1] || x==enemy1->gridPos[0]+1 && y==enemy1->gridPos[1] || x==enemy1->gridPos[0] && y==enemy1->gridPos[1]+1 || x==enemy1->gridPos[0]+1 && y==enemy1->gridPos[1]+1) {
 					// Don't Draw
 				} else {
 					Draw_Fill_Rect(x_painter, y_painter, 15,15);
@@ -347,6 +348,25 @@ void DrawEnemys(int num, ...) {
 }
 */
 
+void checkGameStateChange(GameStateType* state, int power[18][32], playerGameObject* player, playerGameObject* enemy1) {
+	int i;
+	int j;
+	bool pelletFlag = true;
+	for(i=0; i<18; i++) {
+		for(j=0; j<32; j++) {
+			 if(power[i][j]==1) {
+				 pelletFlag = false;
+			 }
+		}
+	}
+	if(pelletFlag == true) {
+		*state = WIN;
+	}
+	if(player->gridPos[0] == enemy1->gridPos[0] && player->gridPos[1] == enemy1->gridPos[1]) {
+		*state = LOSE;
+	}
+}
+
 void DrawEnemys(playerGameObject* enemy1) {
 	GLCD_SetForegroundColor(GLCD_COLOR_RED);
 	DrawPlayer(enemy1);
@@ -355,6 +375,7 @@ void DrawEnemys(playerGameObject* enemy1) {
 uint32_t ADC_VALUES[2];
 int powerPellets[18][32];
 int main(void) {
+	GameStateType gameState;
 	
 	// Player variables
 	playerGameObject player;
@@ -370,7 +391,7 @@ int main(void) {
 	player.gridPos[0] = 1;
 	player.gridPos[1] = 1;
 	enemy01.gridPos[0] = 1;
-	enemy01.gridPos[1] = 5;
+	enemy01.gridPos[1] = 6;
 
 	
 	
@@ -387,52 +408,69 @@ int main(void) {
 	
 	// Init power pellets
 	setupPowerPellets(level_01_matrix, powerPellets);
-	drawPowerPellets(powerPellets);
+	
+	gameState = PLAY;
 
 	// Game Loop
 	while(1) {
-		
-		// GPIO input to request change in direction
-		if(ADC_VALUES[0] > 3000) {
-			player.requestedDirection = LEFT;
-		}
-		if(ADC_VALUES[0] < 1000) {
-			player.requestedDirection = RIGHT;
-		}
-		if(ADC_VALUES[1] > 3000) {
-			player.requestedDirection = UP;
-		}
-		if(ADC_VALUES[1] < 1000) {
-			player.requestedDirection = DOWN;
-		}
-		
-		
-		// Handle player movement
-		handleRequestedDirection(&player, level_01_matrix);
-		movePlayer(&player, level_01_matrix);
-		
-		
-		
-		wait(100);
-		
-		// Move pacman in current direction
-		//MovePlayer(playerGridPos, level_01_matrix, currentDirection);
-		// Draw updated pacman location
-		GLCD_SetForegroundColor(GLCD_COLOR_YELLOW);
-		DrawPlayer(&player);
-		DrawEnemys(&enemy01);
+		while(gameState==PLAY) {
+			
+			// GPIO input to request change in direction
+			if(ADC_VALUES[0] > 3000) {
+				player.requestedDirection = LEFT;
+			}
+			if(ADC_VALUES[0] < 1000) {
+				player.requestedDirection = RIGHT;
+			}
+			if(ADC_VALUES[1] > 3000) {
+				player.requestedDirection = UP;
+			}
+			if(ADC_VALUES[1] < 1000) {
+				player.requestedDirection = DOWN;
+			}
+			
+			
+			// Handle player movement
+			handleRequestedDirection(&player, level_01_matrix);
+			movePlayer(&player, level_01_matrix);
+			
+			
+			
+			wait(100);
+			
+			
+			
+			// Move pacman in current direction
+			//MovePlayer(playerGridPos, level_01_matrix, currentDirection);
+			// Draw updated pacman location
+			GLCD_SetForegroundColor(GLCD_COLOR_YELLOW);
+			DrawPlayer(&player);
+			DrawEnemys(&enemy01);
 
-		
-		updatePowerPellets(&player, powerPellets);
-		
-		// Reset empty paths to black
-		clearEmptyPaths(level_01_matrix, powerPellets, &player, &enemy01);
-		
-		/*/
-		if(gameWin(&powerPellets)) {
-			GLCD_DrawString(0,0, "YOU WIN!");
+			
+			updatePowerPellets(&player, powerPellets);
+			
+			// Reset empty paths to black
+			clearEmptyPaths(level_01_matrix, powerPellets, &player, &enemy01);
+			drawPowerPellets(powerPellets);
+			
+			
+			checkGameStateChange(&gameState, powerPellets, &player, &enemy01);
+			
+			
+			/*/
+			if(gameWin(&powerPellets)) {
+				GLCD_DrawString(0,0, "YOU WIN!");
+			}
+			*/
+			//GLCD_ClearScreen();
 		}
-		*/
-		//GLCD_ClearScreen();
+		
+		while(gameState==WIN) {
+			GLCD_DrawString(0,0,"WINNNNERRR");
+		}
+		while(gameState==LOSE) {
+			GLCD_DrawString(0,0,"LOOOOOSERRR");
+		}
 	}
 }
