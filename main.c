@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdlib.h>
 #include <math.h>
 #include "stm32f7xx_hal.h"
 #include "GLCD_Config.h"
@@ -11,8 +12,8 @@
 
 // Hardware definitions
 #define wait HAL_Delay
-extern GLCD_FONT GLCD_Font_6x8;
-extern GLCD_FONT GLCD_Font_16x24;
+//extern GLCD_FONT GLCD_Font_6x8;
+//extern GLCD_FONT GLCD_Font_16x24;
 
 // Game definitions
 #define PI 3.141592654
@@ -180,7 +181,7 @@ void setup(void) {
 	SystemClock_Config(); //<- Defined in snipped.c from labs
 	GLCD_Initialize();
 	MX_ADC_Init();
-	GLCD_SetFont(&GLCD_Font_16x24);
+	//GLCD_SetFont(&GLCD_Font_16x24);
 	GLCD_SetForegroundColor(GLCD_COLOR_BLUE);
 	GLCD_SetBackgroundColor(GLCD_COLOR_BLACK);
 	GLCD_ClearScreen();
@@ -378,15 +379,38 @@ void DrawEnemys(playerGameObject* enemy1) {
 }
 
 void figureEnemyDirection(playerGameObject* enemy, playerGameObject* player) {
-	int m;
-	double angle;
-	// Gradient
-	m = (player->gridPos[1]-enemy->gridPos[1])/(player->gridPos[0]-enemy->gridPos[0]);
-	angle = atan(m);
-	angle = (angle *180) / PI;
+	int r = rand() % 100;
 	
-	if(angle > 90 && angle < 180) {
-		enemy->requestedDirection = UP;
+	if((enemy->gridPos[0] - player->gridPos[0]) * (enemy->gridPos[0] - player->gridPos[0]) > (enemy->gridPos[1] - player->gridPos[1]) * (enemy->gridPos[1] - player->gridPos[1])) {
+		// Prefer horizontal movement
+		if(enemy->gridPos[0] < player->gridPos[0]) {
+			if(r > 30) {
+				enemy->requestedDirection = RIGHT;
+			} else {
+				enemy->requestedDirection = LEFT;
+			}
+		} else {
+			if(r > 30) {
+				enemy->requestedDirection = LEFT;
+			} else {
+				enemy->requestedDirection = RIGHT;
+			}
+		}
+	} else {
+		// Prefter vertial movement
+		if(enemy->gridPos[1] < player->gridPos[1]) {
+			if(r > 20) {
+				enemy->requestedDirection = DOWN;
+			} else {
+				enemy->requestedDirection = UP;
+			}
+		} else {
+			if(r > 20) {
+				enemy->requestedDirection = UP;
+			} else {
+				enemy->requestedDirection = DOWN;
+			}
+		}
 	}
 }
 
@@ -408,8 +432,8 @@ int main(void) {
 	// Player starting position
 	player.gridPos[0] = 1;
 	player.gridPos[1] = 1;
-	enemy01.gridPos[0] = 1;
-	enemy01.gridPos[1] = 6;
+	enemy01.gridPos[0] = 28;
+	enemy01.gridPos[1] = 16;
 	
 
 	// Just testing
