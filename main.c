@@ -1,38 +1,38 @@
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
+#include <stdlib.h>
+#include <math.h>
 #include "stm32f7xx_hal.h"
 #include "GLCD_Config.h"
 #include "Board_GLCD.h"
 
+// Level Files
+#include "level_01.h" // int level_01_matrix[18][32]
 
+// Hardware definitions
 #define wait HAL_Delay
-extern GLCD_FONT GLCD_Font_6x8;
-extern GLCD_FONT GLCD_Font_16x24;
+//extern GLCD_FONT GLCD_Font_6x8;
+//extern GLCD_FONT GLCD_Font_16x24;
 
+// Game definitions
+#define PI 3.141592654
 typedef enum directions {UP, DOWN, LEFT, RIGHT} DirectionType;
+typedef enum gameStates {PLAY, WIN, LOSE, RESTART} GameStateType;
 
+typedef int moveScore[18];
 
-int level_01_matrix[18][32] =
-{
-{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-{1,0,0,1,1,1,1,0,0,1,1,1,1,0,0,1,1,0,0,1,1,1,1,0,0,1,1,1,1,0,0,1},
-{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-{1,0,0,1,1,1,1,0,0,1,1,0,0,1,1,1,1,1,1,0,0,1,1,0,0,1,1,1,1,0,0,1},
-{1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1},
-{1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1},
-{1,1,1,1,1,1,1,0,0,1,1,1,1,0,0,1,1,0,0,1,1,1,1,0,0,1,1,1,1,1,1,1},
-{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-{1,1,1,1,1,1,1,0,0,1,1,1,1,0,0,1,1,0,0,1,1,1,1,0,0,1,1,1,1,1,1,1},
-{1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1},
-{1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1},
-{1,0,0,1,1,1,1,0,0,1,1,0,0,1,1,1,1,1,1,0,0,1,1,0,0,1,1,1,1,0,0,1},
-{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-};
+typedef struct {
+	int gridPos[2];
+	DirectionType currentDirection;
+	DirectionType requestedDirection;
+	moveScore moveScore;
+} playerGameObject;
+
+typedef struct {
+	int gridPos[2];
+	int moveScore[18][32];
+} enemyGameObject;
 
 
 // Bring the bellow code into an external file if you can?
@@ -76,9 +76,7 @@ void SystemClock_Config(void) {
 }
 
 
-uint32_t joystick_data[2];
-
-// Init ADC configuration 
+// ADC configuration 
 ADC_HandleTypeDef hadc;
 static void MX_ADC_Init(void)
 {
@@ -111,8 +109,6 @@ static void MX_ADC_Init(void)
 	HAL_NVIC_SetPriority(ADC_IRQn,0,0);
 	HAL_NVIC_EnableIRQ(ADC_IRQn);
 	
-	
-	
 	// Configure ADC
 	hadc.Instance = ADC3;
 	hadc.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
@@ -128,14 +124,17 @@ static void MX_ADC_Init(void)
 	hadc.Init.DMAContinuousRequests = ENABLE;
 	hadc.Init.EOCSelection = DISABLE;
 	
+	// Init ADC
 	HAL_ADC_Init(&hadc);
 	
+	// Configure Channel Pin A0
 	adcChannel.Channel = ADC_CHANNEL_0;
 	adcChannel.Rank = 1;
 	adcChannel.SamplingTime = ADC_SAMPLETIME_480CYCLES;
 	adcChannel.Offset = 0;
 	HAL_ADC_ConfigChannel(&hadc, &adcChannel);
 	
+	// Configre Channel Pin A1
 	adcChannel.Channel = ADC_CHANNEL_8;
 	adcChannel.Rank = 2;
 	adcChannel.SamplingTime = ADC_SAMPLETIME_480CYCLES;
@@ -144,6 +143,7 @@ static void MX_ADC_Init(void)
 	
 }
 
+// DMA Configuration
 DMA_HandleTypeDef dmac;
 void CongigureDMA() {
 	
@@ -166,14 +166,28 @@ void CongigureDMA() {
 	dmac.Init.MemBurst = DMA_MBURST_SINGLE;
 	dmac.Init.PeriphBurst = DMA_PBURST_SINGLE;
 	
+	// Init DMA
 	HAL_DMA_Init(&dmac);
 	__HAL_LINKDMA(&hadc, DMA_Handle, dmac);
 	
+	// Set DMA Priority
 	HAL_NVIC_SetPriority(DMA2_Stream4_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(DMA2_Stream4_IRQn);
 	
 }
 
+void setup(void) {
+	HAL_Init(); // Initialize "Hardware Abstraction Layer"
+	SystemClock_Config(); //<- Defined in snipped.c from labs
+	GLCD_Initialize();
+	MX_ADC_Init();
+	//GLCD_SetFont(&GLCD_Font_16x24);
+	GLCD_SetForegroundColor(GLCD_COLOR_BLUE);
+	GLCD_SetBackgroundColor(GLCD_COLOR_BLACK);
+	GLCD_ClearScreen();
+}
+
+// Draw rectangle and fill
 void Draw_Fill_Rect(int xPos, int yPos, int xWidth, int yWidth) {
 	int i;
 	for(i=0; i<xWidth; i++) {
@@ -181,25 +195,7 @@ void Draw_Fill_Rect(int xPos, int yPos, int xWidth, int yWidth) {
 	}
 }
 
-/*void Draw_Level(char* level) {
-	int painterX;
-	int painterY;
-	int painterCol;
-	int painterRow;
-	painterX = 0;
-	painterY = 0;
-	for(painterRow=0; painterRow<18; painterRow++) {
-		for(painterCol=0; painterCol<32; painterCol++) {
-			if(level_01[(painterRow*32)+painterCol]=='1') {
-				Draw_Fill_Rect(painterX, painterY, 15, 15);
-			}
-			painterX += 15;
-		}
-		painterX = 0;
-		painterY += 15;
-	}
-}*/
-
+// Draw level from level matrix file
 void Draw_Level_Matrix(int* level_matrix) {
 	int y; // Y Grid coordinate
 	int x; // X Grid coordinate
@@ -217,18 +213,70 @@ void Draw_Level_Matrix(int* level_matrix) {
 	}
 }
 
-void Draw_Level_Path(int* level_matrix, int* playerPos) {
+// Draw player as rectangle
+void DrawPlayer(playerGameObject* player) {
+	Draw_Fill_Rect(player->gridPos[0]*15, player->gridPos[1]*15,30,30);
+}
+
+// Change player direction if possible
+void handleRequestedDirection(playerGameObject* player, int level[18][32]) {
+	if(player->requestedDirection == LEFT) {
+		if(level[player->gridPos[1]][player->gridPos[0]-1] == 0 && level[player->gridPos[1]+1][player->gridPos[0]-1] == 0) {
+			player->currentDirection = player->requestedDirection;
+		}
+	} else if(player->requestedDirection == RIGHT) {
+		if(level[player->gridPos[1]][player->gridPos[0]+2] == 0 && level[player->gridPos[1]+1][player->gridPos[0]+2] == 0) {
+			player->currentDirection = player->requestedDirection;
+		}
+	} else if(player->requestedDirection == UP) {
+		if(level[player->gridPos[1]-1][player->gridPos[0]] == 0 && level[player->gridPos[1]-1][player->gridPos[0]+1] == 0) {
+			player->currentDirection = player->requestedDirection;
+		}
+	} else if(player->requestedDirection == DOWN) {
+		if(level[player->gridPos[1]+2][player->gridPos[0]] == 0 && level[player->gridPos[1]+2][player->gridPos[0]+1] == 0) {
+			player->currentDirection = player->requestedDirection;
+		}
+	}
+}
+
+void movePlayer(playerGameObject* player, int level[18][32]) {
+	if(player->currentDirection == LEFT) {
+		if(level[player->gridPos[1]][player->gridPos[0]-1] == 0 && level[player->gridPos[1]+1][player->gridPos[0]-1] == 0) {
+			player->gridPos[0] -= 1;
+		}
+	} else if(player->currentDirection == RIGHT) {
+		if(level[player->gridPos[1]][player->gridPos[0]+2] == 0 && level[player->gridPos[1]+1][player->gridPos[0]+2] == 0) {
+			player->gridPos[0] += 1;
+		}
+	} else if(player->currentDirection == UP) {
+		if(level[player->gridPos[1]-1][player->gridPos[0]] == 0 && level[player->gridPos[1]-1][player->gridPos[0]+1] == 0) {
+			player->gridPos[1] -= 1;
+		}
+	} else if(player->currentDirection == DOWN) {
+		if(level[player->gridPos[1]+2][player->gridPos[0]] == 0 && level[player->gridPos[1]+2][player->gridPos[0]+1] == 0) {
+			player->gridPos[1] += 1;
+		}
+	}
+}
+
+
+void clearEmptyPaths(int level_matrix[18][32], int power[18][32], playerGameObject* player, playerGameObject* enemy1) {
 	int y; // Y Grid coordinate
 	int x; // X Grid coordinate
 	int y_painter = 0; // Y Screen position used to draw
 	int x_painter = 0; // X Screen position used to draw
+
+	
+	GLCD_SetForegroundColor(GLCD_COLOR_BLACK);
 	for(y=0; y<18; y++) { // Loop over each grid row
 		for(x=0; x<32; x++) { // Loop over each grid column
-			if(level_01_matrix[y][x] == 0) { // Check if we should draw a path at current grid position
-				if(x == playerPos[0] && y == playerPos[1] || x == playerPos[0]+1 && y == playerPos[1] || x == playerPos[0] && y == playerPos[1]+1 || x == playerPos[0]+1 && y == playerPos[1]+1) {
-					//
+			if(level_matrix[y][x] == 0) {
+				if(x==player->gridPos[0] && y==player->gridPos[1] || x==player->gridPos[0]+1 && y==player->gridPos[1] || x==player->gridPos[0] && y==player->gridPos[1]+1 || x==player->gridPos[0]+1 && y==player->gridPos[1]+1) {
+					// Don't Draw
+				} else if(x==enemy1->gridPos[0] && y==enemy1->gridPos[1] || x==enemy1->gridPos[0]+1 && y==enemy1->gridPos[1] || x==enemy1->gridPos[0] && y==enemy1->gridPos[1]+1 || x==enemy1->gridPos[0]+1 && y==enemy1->gridPos[1]+1) {
+					// Don't Draw
 				} else {
-					Draw_Fill_Rect(x_painter,y_painter, 15,15);
+					Draw_Fill_Rect(x_painter, y_painter, 15,15);
 				}
 			}
 			x_painter += 15; // Increment x painter position by block size (15px)
@@ -238,87 +286,239 @@ void Draw_Level_Path(int* level_matrix, int* playerPos) {
 	}
 }
 
-void setup(void) {
-	HAL_Init(); // Initialize "Hardware Abstraction Layer"
-	SystemClock_Config(); //<- Defined in snipped.c from labs
-	GLCD_Initialize();
-	MX_ADC_Init();
-	GLCD_SetFont(&GLCD_Font_16x24);
-	GLCD_SetForegroundColor(GLCD_COLOR_BLUE);
-	GLCD_SetBackgroundColor(GLCD_COLOR_BLACK);
-	GLCD_ClearScreen();
-}
 
-void MovePlayer(int *playerGridPos, int level_matrix[18][32], DirectionType direction) {
-	// Else-if prevents moving in multiple directions at once
-	if(direction==RIGHT && level_matrix[playerGridPos[1]][playerGridPos[0]+2] != 1) {
-		playerGridPos[0] += 1;
-	} else if(direction==LEFT && level_matrix[playerGridPos[1]][playerGridPos[0]-1] != 1) {
-		playerGridPos[0] -= 1;
-	} else if(direction==UP && level_matrix[playerGridPos[1]-1][playerGridPos[0]] != 1 && level_matrix[playerGridPos[1]-1][playerGridPos[0]+1] != 1) {
-		playerGridPos[1] -= 1;
-	} else if(direction==DOWN && level_matrix[playerGridPos[1]+2][playerGridPos[0]] != 1 && level_matrix[playerGridPos[1]+2][playerGridPos[0]+1] != 1) {
-		playerGridPos[1] += 1;
+void setupPowerPellets(int level[18][32], int power[18][32]) {
+	int i;
+	int j;
+	for(i=0; i<18; i++){
+		for(j=0; j<32; j++) {
+			if(level[i][j] == 0 && level[i+1][j] == 0 && level[i][j+1] == 0 && level[i+1][j+1] == 0) {
+				power[i][j] = 1;
+			} else {
+				power[i][j] = 0;
+			}
+		}
+	}
+	// Clear Bottom row of pellets (because on some levels there is no bottom wall 
+	for(i=0; i<32; i++) {
+		power[17][i] = 0;
 	}
 }
-void DrawPlayer(int *playerGridPos) {
-	GLCD_SetForegroundColor(GLCD_COLOR_YELLOW);
-	Draw_Fill_Rect(playerGridPos[0]*15, playerGridPos[1]*15,30,30);
+
+void drawPowerPellets(int power[18][32]) {
+	int y; // Y Grid coordinate
+	int x; // X Grid coordinate
+	int y_painter = 0; // Y Screen position used to draw
+	int x_painter = 0; // X Screen position used to draw
+	GLCD_SetForegroundColor(GLCD_COLOR_GREEN);
+	for(y=0; y<18; y++) { // Loop over each grid row
+		for(x=0; x<32; x++) {
+			if(power[y][x] == 1) {
+				Draw_Fill_Rect(x_painter + 12, y_painter + 12, 5,5);
+			}
+			x_painter += 15;
+		}
+		x_painter = 0;
+		y_painter += 15;
+	}
+}
+
+void updatePowerPellets(playerGameObject* player, int power[18][32]) {
+	power[player->gridPos[1]][player->gridPos[0]] = 0;
+}
+
+/*
+bool gameWin(powerPelletsObject* powerPellets) {
+	int i;
+	int j;
+	bool flag = true;
+	for(i=0; i<18; i++) {
+		for(j=0; j<32; j++) {
+			if(powerPellets->powerPellets[i][j] == 1) {
+				flag = false;
+			}
+		}
+	}
+	return flag;
+}
+*/
+
+/*
+void DrawEnemys(int num, ...) {
+	int i;
+	va_list valist;
+	va_start(valist,num);
+	for(i=0; i<num; i++) {
+		DrawPlayer(va_arg(valist,int*));
+	}
+}
+*/
+
+void checkGameStateChange(GameStateType* state, int power[18][32], playerGameObject* player, playerGameObject* enemy1) {
+	int i;
+	int j;
+	bool pelletFlag = true;
+	for(i=0; i<18; i++) {
+		for(j=0; j<32; j++) {
+			 if(power[i][j]==1) {
+				 pelletFlag = false;
+			 }
+		}
+	}
+	if(pelletFlag == true) {
+		*state = WIN;
+	}
+	if(player->gridPos[0] == enemy1->gridPos[0] && player->gridPos[1] == enemy1->gridPos[1]) {
+		*state = LOSE;
+	}
+}
+
+void DrawEnemys(playerGameObject* enemy1) {
+	GLCD_SetForegroundColor(GLCD_COLOR_RED);
+	DrawPlayer(enemy1);
+}
+
+void figureEnemyDirection(playerGameObject* enemy, playerGameObject* player) {
+	int r = rand() % 100;
+	
+	if((enemy->gridPos[0] - player->gridPos[0]) * (enemy->gridPos[0] - player->gridPos[0]) > (enemy->gridPos[1] - player->gridPos[1]) * (enemy->gridPos[1] - player->gridPos[1])) {
+		// Prefer horizontal movement
+		if(enemy->gridPos[0] < player->gridPos[0]) {
+			if(r > 30) {
+				enemy->requestedDirection = RIGHT;
+			} else {
+				enemy->requestedDirection = LEFT;
+			}
+		} else {
+			if(r > 30) {
+				enemy->requestedDirection = LEFT;
+			} else {
+				enemy->requestedDirection = RIGHT;
+			}
+		}
+	} else {
+		// Prefter vertial movement
+		if(enemy->gridPos[1] < player->gridPos[1]) {
+			if(r > 20) {
+				enemy->requestedDirection = DOWN;
+			} else {
+				enemy->requestedDirection = UP;
+			}
+		} else {
+			if(r > 20) {
+				enemy->requestedDirection = UP;
+			} else {
+				enemy->requestedDirection = DOWN;
+			}
+		}
+	}
 }
 
 uint32_t ADC_VALUES[2];
+int powerPellets[18][32];
 int main(void) {
-	// Gameplay Variables
-	int playerGridPos[2];
-	DirectionType direction;
+	GameStateType gameState;
+	
+	// Player variables
+	playerGameObject player;
 
+	// Enemy variabels
+	playerGameObject enemy01;
+
+	
+	// Setup board
 	setup();
 	
 	// Player starting position
-	playerGridPos[0] = 1;
-	playerGridPos[1] = 1;	
+	player.gridPos[0] = 1;
+	player.gridPos[1] = 1;
+	enemy01.gridPos[0] = 28;
+	enemy01.gridPos[1] = 16;
+	
+
+	// Just testing
+	enemy01.requestedDirection = RIGHT;
+	
+	
+	// Start DMA for direct pipe from ADC
 	CongigureDMA();
 	HAL_ADC_Start_DMA(&hadc, ADC_VALUES, 2);
 	
 	
+	
+	// Draw level walls once
 	GLCD_SetForegroundColor(GLCD_COLOR_BLUE);
-	// Draw Level Walls Once
 	Draw_Level_Matrix(*level_01_matrix);
+	
+	// Init power pellets
+	setupPowerPellets(level_01_matrix, powerPellets);
+	
+	gameState = PLAY;
 
 	// Game Loop
 	while(1) {
-		
-		
-		// Detect change in player input
-		// Change direction value
-		if(ADC_VALUES[0] > 3000) {
-			direction = LEFT;
+		while(gameState==PLAY) {
+			
+			// GPIO input to request change in direction
+			if(ADC_VALUES[0] > 3000) {
+				player.requestedDirection = LEFT;
+			}
+			if(ADC_VALUES[0] < 1000) {
+				player.requestedDirection = RIGHT;
+			}
+			if(ADC_VALUES[1] > 3000) {
+				player.requestedDirection = UP;
+			}
+			if(ADC_VALUES[1] < 1000) {
+				player.requestedDirection = DOWN;
+			}
+			
+			// Figure out what direction the enemy's must go
+			figureEnemyDirection(&enemy01, &player);
+			
+			// Handle player movement
+			handleRequestedDirection(&player, level_01_matrix);
+			movePlayer(&player, level_01_matrix);
+			
+			
+			handleRequestedDirection(&enemy01, level_01_matrix);
+			movePlayer(&enemy01, level_01_matrix);
+			
+			wait(100);
+			
+			
+			
+			// Move pacman in current direction
+			//MovePlayer(playerGridPos, level_01_matrix, currentDirection);
+			// Draw updated pacman location
+			GLCD_SetForegroundColor(GLCD_COLOR_YELLOW);
+			DrawPlayer(&player);
+			DrawEnemys(&enemy01);
+
+			
+			updatePowerPellets(&player, powerPellets);
+			
+			// Reset empty paths to black
+			clearEmptyPaths(level_01_matrix, powerPellets, &player, &enemy01);
+			drawPowerPellets(powerPellets);
+			
+			
+			checkGameStateChange(&gameState, powerPellets, &player, &enemy01);
+			
+			
+			/*/
+			if(gameWin(&powerPellets)) {
+				GLCD_DrawString(0,0, "YOU WIN!");
+			}
+			*/
+			//GLCD_ClearScreen();
 		}
-		if(ADC_VALUES[0] < 1000) {
-			direction = RIGHT;
+		
+		while(gameState==WIN) {
+			GLCD_DrawString(0,0,"WINNNNERRR");
 		}
-		if(ADC_VALUES[1] > 3000) {
-			direction = UP;
+		while(gameState==LOSE) {
+			GLCD_DrawString(0,0,"LOOOOOSERRR");
 		}
-		if(ADC_VALUES[1] < 1000) {
-			direction = DOWN;
-		}
-		
-		
-		// Draw Level Paths (Black won't apear to be flickering)
-		GLCD_SetForegroundColor(GLCD_COLOR_BLACK);
-		Draw_Level_Path(*level_01_matrix, playerGridPos);
-		
-		wait(100);
-		
-		// Move pacman in current direction
-		MovePlayer(playerGridPos, level_01_matrix, direction);
-		// Draw updated pacman location
-		DrawPlayer(playerGridPos);
-		
-		
-		
-		//GLCD_ClearScreen();
 	}
-	
 }
