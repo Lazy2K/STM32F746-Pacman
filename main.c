@@ -417,6 +417,7 @@ void figureEnemyDirection(playerGameObject* enemy, playerGameObject* player) {
 uint32_t ADC_VALUES[2];
 int powerPellets[18][32];
 int main(void) {
+	// Game variables
 	GameStateType gameState;
 	
 	// Player variables
@@ -425,26 +426,20 @@ int main(void) {
 	// Enemy variabels
 	playerGameObject enemy01;
 
-	
 	// Setup board
 	setup();
 	
 	// Player starting position
 	player.gridPos[0] = 1;
 	player.gridPos[1] = 1;
+	
+	// Enemy starting position
 	enemy01.gridPos[0] = 28;
 	enemy01.gridPos[1] = 16;
-	
-
-	// Just testing
-	enemy01.requestedDirection = RIGHT;
-	
 	
 	// Start DMA for direct pipe from ADC
 	CongigureDMA();
 	HAL_ADC_Start_DMA(&hadc, ADC_VALUES, 2);
-	
-	
 	
 	// Draw level walls once
 	GLCD_SetForegroundColor(GLCD_COLOR_BLUE);
@@ -453,6 +448,7 @@ int main(void) {
 	// Init power pellets
 	setupPowerPellets(level_01_matrix, powerPellets);
 	
+	// Start game
 	gameState = PLAY;
 
 	// Game Loop
@@ -488,30 +484,25 @@ int main(void) {
 			
 			
 			
-			// Move pacman in current direction
-			//MovePlayer(playerGridPos, level_01_matrix, currentDirection);
-			// Draw updated pacman location
+			// Draw player
 			GLCD_SetForegroundColor(GLCD_COLOR_YELLOW);
 			DrawPlayer(&player);
+			
+			// Draw enemy
 			DrawEnemys(&enemy01);
 
-			
+			// Check if pellets eaten
 			updatePowerPellets(&player, powerPellets);
 			
 			// Reset empty paths to black
 			clearEmptyPaths(level_01_matrix, powerPellets, &player, &enemy01);
+			
+			// Re-draw power pellets
 			drawPowerPellets(powerPellets);
 			
-			
+			// Check if the game is won or lost
 			checkGameStateChange(&gameState, powerPellets, &player, &enemy01);
 			
-			
-			/*/
-			if(gameWin(&powerPellets)) {
-				GLCD_DrawString(0,0, "YOU WIN!");
-			}
-			*/
-			//GLCD_ClearScreen();
 		}
 		
 		while(gameState==WIN) {
