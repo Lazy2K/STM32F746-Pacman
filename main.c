@@ -12,8 +12,8 @@
 
 // Hardware definitions
 #define wait HAL_Delay
-//extern GLCD_FONT GLCD_Font_6x8;
-//extern GLCD_FONT GLCD_Font_16x24;
+extern GLCD_FONT GLCD_Font_6x8;
+extern GLCD_FONT GLCD_Font_16x24;
 
 // Game definitions
 #define PI 3.141592654
@@ -417,6 +417,7 @@ void figureEnemyDirection(playerGameObject* enemy, playerGameObject* player) {
 uint32_t ADC_VALUES[2];
 int powerPellets[18][32];
 int main(void) {
+	
 	// Game variables
 	GameStateType gameState;
 	
@@ -428,6 +429,7 @@ int main(void) {
 
 	// Setup board
 	setup();
+	GLCD_SetFont(&GLCD_Font_16x24);
 	
 	// Player starting position
 	player.gridPos[0] = 1;
@@ -509,7 +511,39 @@ int main(void) {
 			GLCD_DrawString(0,0,"WINNNNERRR");
 		}
 		while(gameState==LOSE) {
-			GLCD_DrawString(0,0,"LOOOOOSERRR");
+			GLCD_DrawString(0,0,"You Lose:");
+			GLCD_DrawString(0,24,"Move the joystick to play again.");
+			// GPIO input to request change in direction
+			if(ADC_VALUES[0] > 3000) {
+				gameState = RESTART;
+			}
+			if(ADC_VALUES[0] < 1000) {
+				gameState = RESTART;
+			}
+			if(ADC_VALUES[1] > 3000) {
+				gameState = RESTART;
+			}
+			if(ADC_VALUES[1] < 1000) {
+				gameState = RESTART;
+			}
+		}
+		
+		while(gameState==RESTART) {
+			// Player starting position
+	player.gridPos[0] = 1;
+	player.gridPos[1] = 1;
+	
+	// Enemy starting position
+	enemy01.gridPos[0] = 28;
+	enemy01.gridPos[1] = 16;
+			GLCD_SetForegroundColor(GLCD_COLOR_BLUE);
+			Draw_Level_Matrix(*level_01_matrix);
+	
+	// Init power pellets
+	setupPowerPellets(level_01_matrix, powerPellets);
+	
+	// Start game
+	gameState = PLAY;
 		}
 	}
 }
