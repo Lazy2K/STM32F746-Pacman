@@ -176,6 +176,7 @@ void CongigureDMA() {
 	
 }
 
+
 void setup(void) {
 	HAL_Init(); // Initialize "Hardware Abstraction Layer"
 	SystemClock_Config(); //<- Defined in snipped.c from labs
@@ -452,10 +453,12 @@ int main(void) {
 	
 	// Start game
 	gameState = PLAY;
+	
 
 	// Game Loop
 	while(1) {
 		while(gameState==PLAY) {
+			
 			
 			// GPIO input to request change in direction
 			if(ADC_VALUES[0] > 3000) {
