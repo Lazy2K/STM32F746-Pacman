@@ -369,7 +369,10 @@ void checkGameStateChange(GameStateType* state, int power[18][32], playerGameObj
 	if(pelletFlag == true) {
 		*state = WIN;
 	}
-	if(player->gridPos[0] == enemy1->gridPos[0] && player->gridPos[1] == enemy1->gridPos[1]) {
+	if(player->gridPos[0] == enemy1->gridPos[0] && player->gridPos[1] == enemy1->gridPos[1] || 
+		player->gridPos[0] + 1 == enemy1->gridPos[0] && player->gridPos[1] == enemy1->gridPos[1] ||
+		player->gridPos[0] == enemy1->gridPos[0] && player->gridPos[1] + 1 == enemy1->gridPos[1] ||
+		player->gridPos[0] + 1 == enemy1->gridPos[0] && player->gridPos[1] + 1 == enemy1->gridPos[1]) {
 		*state = LOSE;
 	}
 }
